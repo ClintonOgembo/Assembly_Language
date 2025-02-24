@@ -1,0 +1,1252 @@
+#if( ! @defined( string_hhf ))
+?string_hhf := true;
+
+#includeOnce( "hla.hhf" )
+#includeOnce( "stdio.hhf" )
+
+namespace str; 
+
+	/*
+	** In order to write code that continues to work
+	** even if the internal format of a string changes,
+	** yet allow access to the internal fields of the
+	** string record, it is very important that programs
+	** accessing those internal fields use the following
+	** offsets.
+	*/
+
+	const
+
+		/*
+		** Number of bytes in the string record preceding
+		** the actual character data.  The beginning address
+		** of a string structure, plus this value, is the
+		** base address of the string (the address of the
+		** actual character data).
+		*/
+
+		BytesBeforeStr: int32 :=  8;
+
+		/*
+		** Const versions of strRec, below.
+		*/
+
+		MaxStrLenOfs:	int32 := -8;
+		lengthOfs:		int32 := -4;
+		strDataOfs:		int32 :=  0;
+
+
+	/*
+	** Note: HLA strings consist of a pointer that points at
+	** a zero terminated array of characters.  This array of
+	** characters is at least four bytes long and is always an
+	** even multiple of four characters long.
+	**  
+	** The eight bytes immediately before this pointer 
+	** contain the maximum length and the current dynamic length
+	** of the string data.
+	**
+	** The strRec record provides a template for such a string.
+	** The strData field is specified as an array of 12 characters
+	** to ensure that the size of this structure is 12 bytes (the
+	** "-8" starting offset reduces the size of the record by
+	** eight bytes, so this is corrected in the strData field).
+	** If you have a pointer to an "strRec" record, the pointer
+	** should be pointing at the strData field.  Then you can use
+	** the MaxStrLen and length fieldnames to access those fields
+	** at the appropriate negative offsets. 
+	*/
+
+	type
+		strRec:	record := -8;
+
+					MaxStrLen:	dword;
+					length:		dword;
+					strData:	char[12];
+
+				endrecord;
+
+
+	// str.mLength-	Macro version of str.length.
+	//				Much faster, but not as flexible.
+
+	#macro mLength( _src_ );
+
+		#if( @IsReg32( _src_ ))
+
+			mov( (type str.strRec [_src_]).length, eax );
+
+		#elseif
+		(
+				@class( _src_ ) = hla.cVar
+			|	@class( _src_ ) = hla.cStatic
+			|	@class( _src_ ) = hla.cParm
+		)
+
+			#if( @type( _src_ ) = @type( string ))
+
+				mov( _src_, eax );
+				mov( (type str.strRec [eax]).length, eax );
+
+			#else
+
+				#error( "Expected a string variable" )
+
+			#endif
+
+		#else
+
+			#error( "Expected a string variable or 32-bit register" )
+
+		#endif
+
+	#endmacro
+
+
+	// str.constant( literal_constant )
+	//
+	//	This macro creates a string constant object whose address
+	// you may assign to a string variable.  This is useful, for
+	// example, when initializing fields of a record with string data.
+	
+	#macro constant( __strconst ):__strname,__padding;
+		forward( __strname );
+			align(4);
+			dword @length( __strconst ), @length( __strconst );
+		__strname:char; @nostorage;
+			byte __strconst, 0;
+			?__padding := ((4 - ((@length( __strconst ) + 1) mod 4)) mod 4);
+			#while( __padding > 0 )
+			
+				byte 0;
+				?__padding -= 1;
+				
+			#endwhile
+			
+	#endmacro
+
+
+	// str.strvar-	Allocates storage for a static string in
+	//				the HLA STATIC section.
+
+	#macro strvar( strsize ): _strVar_;
+
+		#if( ( @section & hla.inStatic ) != hla.inStatic )
+
+			#error( "str.strvar is legal only in the STATIC section" )
+			string // To prevent cascading errors
+
+		#elseif( !@IsConst( strsize ) | !hla.isNumber( strsize ) )
+
+			#error( "Expected an integer constant string size" );
+			string // To prevent cascading errors
+
+		#else
+				string := &_strVar_;
+				dword strsize;
+				dword 0;
+			    _strVar_: char[ ( strsize + 4 ) & -4 ] :=
+				    [(( strsize + 4 ) & -4 ) dup [#0] ]
+
+		#endif
+
+	#endmacro
+
+
+	// str.init- Initializes a block of memory for use as
+	//			 a string variable.  Returns the pointer
+	//			 to the string object in EAX.  Note that
+	//			 the numBytes parameter specifies the
+	//			 total number of bytes in the block of
+	//			 memory, not the desired maximum string
+	//			 length.  This value should be at least
+	//			 16 greater than the desired maximum 
+	//			 string length.
+
+	procedure init( var b:var; numBytes:dword );
+		@returns( "eax" ); 
+		@external( "STR_INIT" );
+
+	// zStrToStr, a_zStrToStr- Converts zero terminated strings
+	// to HLA strings.
+	
+	procedure cpyz( var _zstr:var; _dest:string );
+		@external( "STR_CPYZ" );
+
+	procedure a_cpyz( var _zstr:var );
+		@returns( "eax" );
+		@external( "STR_A_CPYZ" );
+	
+
+	// length- Returns the length field of a string.
+
+	procedure length( s:string );
+		@returns( "eax" ); 
+		@external( "STR_LENGTH" );
+		
+	// zlen- Returns the length of a zero-terminated string;
+	
+	procedure zlen( var zstr:byte ); 
+		@returns( "eax" ); 
+		@external( "STR_ZLEN" );
+
+
+	// zcmp- Compares one zstring to another.
+	
+	procedure zcmp( var _zsrc1:byte; var _zsrc2:byte ); 
+		@returns( "eax" ); 
+		@external( "STR_ZCMP" );
+
+
+	procedure cpy( src:string; dest:string );		
+		@returns( "eax" ); 
+		@external( "STR_CPY" ); 
+
+	// zcpy- Copies one zstring to another.
+	
+	procedure zcpy( var zsrc:byte; var zdest:byte ); 
+		@returns( "eax" ); 
+		@external( "STR_ZCPY" );
+
+
+
+	procedure a_cpy( src:string );
+		@returns( "eax" ); 
+		@external( "STR_A_CPY" );
+
+
+	procedure setstr
+	( 
+		src:char; 
+		dest:string; 
+		cnt:uns32 
+	);	
+		@returns( "eax" ); 
+		@external( "STR_SETSTR" );
+
+
+	procedure a_setstr( src:char; count:uns32 );
+		@returns( "eax" ); 
+		@external( "STR_A_SETSTR" );
+
+
+	procedure cat( src:string; dest:string );		
+		@returns( "eax" ); 
+		@external( "STR_CAT" );
+
+
+	procedure zcat( var zsrc:byte; var zdest:byte ); 
+		@returns( "eax" ); 
+		@external( "STR_ZCAT" );
+
+
+	procedure catz( var _zsrc:byte; _dest:string ); 
+		@returns( "eax" ); 
+		@external( "STR_CATZ" );
+
+
+
+
+	procedure a_cat( src1:string; src2:string ); 
+		@returns( "eax" ); 
+		@external( "STR_A_CAT" );
+
+	
+	procedure prefix( src1:string; src2:string );	
+		@returns( "al" ); 
+		@external( "STR_PREFIX" );
+
+	
+	procedure prefix2( src1:string; offs:uns32; src2:string );	
+		@returns( "al" ); 
+		@external( "STR_PREFIX2" );
+
+	
+	procedure iprefix( src1:string; src2:string );	
+		@returns( "al" ); 
+		@external( "STR_IPREFIX" );
+
+	
+	procedure iprefix2( src1:string; offs:uns32; src2:string );	
+		@returns( "al" ); 
+		@external( "STR_IPREFIX2" );
+
+	
+	procedure index( src1:string; src2:string );	
+		@returns( "eax" ); 
+		@external( "STR_INDEX" );
+
+
+	procedure iindex( src1:string; src2:string );	
+		@returns( "eax" ); 
+		@external( "STR_IINDEX" );
+
+
+	procedure index2( src1:string; offs:uns32; src2:string );	
+		@returns( "eax" ); 
+		@external( "STR_INDEX2" );
+
+	procedure iindex2( src1:string; offs:uns32; src2:string );	
+		@returns( "eax" ); 
+		@external( "STR_IINDEX2" );
+
+
+	procedure rindex( src1:string; src2:string );	
+		@returns( "eax" ); 
+		@external( "STR_RINDEX" );
+
+	procedure irindex( src1:string; src2:string );	
+		@returns( "eax" ); 
+		@external( "STR_IRINDEX" );
+
+
+	procedure rindex2( src1:string; offs:uns32; src2:string );	
+		@returns( "eax" ); 
+		@external( "STR_RINDEX2" );
+
+	procedure irindex2( src1:string; offs:int32; src2:string );	
+		@returns( "eax" ); 
+		@external( "STR_IRINDEX2" );
+
+
+	procedure chpos( src1:string; src2:char );
+		@returns( "eax" ); 
+		@external( "STR_CHPOS" );
+
+
+	procedure chpos2( src1:string; offs:uns32; src2:char );
+		@returns( "eax" ); 
+		@external( "STR_CHPOS2" );
+
+
+	procedure rchpos( src1:string; src2:char );
+		@returns( "eax" ); 
+		@external( "STR_RCHPOS" );
+
+	procedure rchpos2( src1:string; offs:uns32; src2:char );
+		@returns( "eax" ); 
+		@external( "STR_RCHPOS2" );
+
+
+	procedure span( src1: string; src2:cset ); 
+		@returns( "eax" ); 
+		@external( "STR_SPAN" );
+
+
+	procedure span2( src1: string; start:uns32; src2:cset ); 
+		@returns( "eax" ); 
+		@external( "STR_SPAN2" );
+
+
+	procedure rspan( src1: string; src2:cset );	
+		@returns( "eax" ); 
+		@external( "STR_RSPAN" );
+
+
+	procedure rspan2( src1: string; start:uns32; src2:cset );	
+		@returns( "eax" ); 
+		@external( "STR_RSPAN2" );
+
+
+
+	procedure brk( src1: string; src2:cset ); 
+		@returns( "eax" ); 
+		@external( "STR_BRK" );
+
+
+	procedure brk2( src1: string; start:uns32; src2:cset ); 
+		@returns( "eax" ); 
+		@external( "STR_BRK2" );
+
+
+	procedure rbrk( src1: string; src2:cset );	
+		@returns( "eax" ); 
+		@external( "STR_RBRK" );
+
+
+	procedure rbrk2( src1: string; start:uns32; src2:cset );	
+		@returns( "eax" ); 
+		@external( "STR_RBRK2" );
+
+
+
+	procedure eq( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_EQ" );
+
+	procedure ne( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_NE" );
+
+	procedure lt( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_LT" );
+
+	procedure gt( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_GT" );
+
+	procedure le( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_LE" );
+
+	procedure ge( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_GE" );
+	 
+	procedure ieq( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_EQI" );
+
+	procedure ine( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_NEI" );
+
+	procedure ilt( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_LTI" );
+
+	procedure igt( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_GTI" );
+
+	procedure ile( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_LEI" );
+
+	procedure ige( src1:string; src2:string );
+		@returns( "al" ); @external( "STR_GEI" );
+	 
+	procedure substr
+	(
+		src		:string; 
+		dest	:string; 
+		start	:dword; 
+		len		:dword 
+	); @external( "STR_SUBSTR" );
+
+	procedure a_substr
+	(
+		src		:string; 
+		start	:dword; 
+		len		:dword 
+	);  @returns( "eax" ); 
+		@external( "STR_A_SUBSTR" );
+
+
+
+	procedure insert
+	(
+		src:	string;
+		dest:	string;
+		start:	dword
+	);  @external( "STR_INSERT" );
+
+	procedure a_insert
+	(
+		src:	string;
+		dest:	string;
+		start:	dword
+	);	@returns( "eax" ); 
+		@external( "STR_A_INSERT" );
+
+
+	procedure delete
+	(
+		dest:	string;
+		start:	dword;
+		len:	dword
+	); @external( "STR_DELETE" );
+
+	procedure a_delete
+	(
+		dest:	string;
+		start:	dword;
+		len:	dword
+	);	@returns( "eax" ); 
+		@external( "STR_A_DELETE" );
+
+
+	procedure truncate
+	(
+		dest:	string;
+		len:	dword
+	); @external( "STR_TRUNCATE" );
+
+	procedure a_truncate
+	(
+		src:	string;
+		len:	dword
+	);	@returns( "eax" ); 
+		@external( "STR_A_TRUNCATE" );
+
+
+	procedure tokenize
+	(
+			src:	string;
+		var	dest:	var
+	);	
+		@returns( "eax" ); 
+		@external( "STR_TOKENIZE" );
+
+
+
+	procedure tokenize2
+	(
+			src:	string;
+		var	dest:	var;
+			delims:	cset
+	);	
+		@returns( "eax" ); 
+		@external( "STR_TOKENIZE2" );
+
+
+
+	procedure upper( dest: string ); 	@external( "STR_UPPER" );
+	procedure a_upper( src: string ); 	@external( "STR_A_UPPER" );
+
+	procedure lower( dest: string ); 	@external( "STR_LOWER" );
+	procedure a_lower( src: string ); 	@external( "STR_A_LOWER" );
+
+
+	procedure delspace( dest: string ); @external( "STR_DELSPACE" );
+
+	procedure a_delspace( src: string );	@external( "STR_A_DELSPACE" );
+
+	procedure trim( dest: string ); 	@external( "STR_TRIM" );
+
+	procedure a_trim( src: string ); 	@external( "STR_A_TRIM" );
+
+
+	procedure replace
+	( 
+		src:string; 
+		dest:string; 
+		from:string; 
+		toStr:string 
+	);	@external( "STR_REPLACE" );
+
+	procedure a_replace( src:string; from:string; toStr:string );
+		@returns( "eax" );
+		@external( "STR_A_REPLACE" );
+
+
+
+	// Value concatenation routines:
+			   
+	procedure catbool( dest:string;  b:boolean );
+		@external( "STR_CATBOOL" );
+
+	procedure catcSize( dest:string;  c:char; width:int32; fill:char );
+		@external( "STR_CATCSIZE" );
+
+	procedure catc( dest:string;  c:char );
+		@external( "STR_CATC" );
+
+
+	// Note that str.cats is equivalent to str.cat:
+
+	procedure cats( dest:string;  src:string );
+		@external( "STR_CATS" );
+
+	procedure catsSize( dest:string; s:string; width:int32; fill:char );
+		@external( "STR_CATSSIZE" );
+
+	procedure catcset( dest:string;  c:cset );
+		@external( "STR_CATCSET" );
+
+
+	procedure catb( dest:string;  b:byte );
+		@external( "STR_CATB" );
+
+	procedure catw( dest:string;  w:word );
+		@external( "STR_CATW" );
+
+	procedure catd( dest:string;  d:dword );
+		@external( "STR_CATD" );
+
+	procedure catq( dest:string;  q:qword );
+		@external( "STR_CATQ" );
+
+	procedure catl( dest:string;  l:lword );
+		@external( "STR_CATL" );
+
+
+
+	procedure catbSize( dest:string;  b:byte; size:dword; fill:char );
+		@external( "STR_CATBSIZE" );
+
+	procedure catwSize( dest:string;  w:word; size:dword; fill:char );
+		@external( "STR_CATWSIZE" );
+
+	procedure catdSize( dest:string;  d:dword; size:dword; fill:char );
+		@external( "STR_CATDSIZE" );
+
+	procedure catqSize( dest:string;  q:qword; size:dword; fill:char );
+		@external( "STR_CATQSIZE" );
+
+	procedure catlSize( dest:string;  l:lword; size:dword; fill:char );
+		@external( "STR_CATLSIZE" );
+
+
+	procedure catu8( dest:string;  u8:byte );
+		@external( "STR_CATU8" );
+
+	procedure catu8Size
+	( 
+		dest:string; 
+		u8:byte; 
+		width:int32; 
+		fill:char 
+	);
+	@external( "STR_CATU8SIZE" );
+
+	procedure catu16( dest:string;  u16:word );
+		@external( "STR_CATU16" );
+
+	procedure catu16Size
+	( 
+		dest:string; 
+		u16:word; 
+		width:int32;
+		fill:char 
+	);
+	@external( "STR_CATU16SIZE" );
+
+	procedure catu32( dest:string;  u32:dword );
+		@external( "STR_CATU32" );
+
+	procedure catu32Size
+	( 
+		dest:string;
+		u32:dword; 
+		width:int32;
+		fill:char 
+	);
+	@external( "STR_CATU32SIZE" );
+
+	procedure catu64( dest:string;  u64:qword );
+		@external( "STR_CATU64" );
+
+	procedure catu64Size
+	( 
+		dest:string;
+		u64:qword; 
+		width:int32;
+		fill:char 
+	);
+	@external( "STR_CATU64SIZE" );
+
+	procedure catu128( dest:string;  u128:lword );
+		@external( "STR_CATU128" );
+
+	procedure catu128Size
+	( 
+		dest:string;
+		u128:lword; 
+		width:int32;
+		fill:char 
+	);
+	@external( "STR_CATU128SIZE" );
+
+
+
+
+
+
+
+	procedure cati8( dest:string;  i8:byte );
+		@external( "STR_CATI8" );
+
+	procedure cati8Size
+	( 
+		dest:string;
+		i8:byte; 
+		width:int32; 
+		fill:char 
+	);
+	@external( "STR_CATI8SIZE" );
+
+	procedure cati16( dest:string;  i16:word );
+		@external( "STR_CATI16" );
+
+	procedure cati16Size
+	( 
+		dest:string;
+		i16:word; 
+		width:int32;
+		fill:char 
+	);
+	@external( "STR_CATI16SIZE" );
+
+	procedure cati32( dest:string;  i32:dword );
+		@external( "STR_CATI32" );
+
+	procedure cati32Size
+	( 
+		dest:string; 
+		i32:dword; 
+		width:int32;
+		fill:char 
+	);
+	@external( "STR_CATI32SIZE" );
+
+	procedure cati64( dest:string;  i64:qword );
+		@external( "STR_CATI64" );
+
+	procedure cati64Size
+	( 
+		dest:string; 
+		i64:qword; 
+		width:int32;
+		fill:char 
+	);
+	@external( "STR_CATI64SIZE" );
+
+	procedure cati128( dest:string;  i128:lword );
+		@external( "STR_CATI128" );
+
+	procedure cati128Size
+	( 
+		dest:string; 
+		i128:lword; 
+		width:int32;
+		fill:char 
+	);
+	@external( "STR_CATI128SIZE" );
+
+
+	procedure catr80
+	( 
+		dest:string; 
+		r:real80; 
+		width:int32; 
+		decpts:uns32
+	);  
+	@external( "STR_CATR80" );
+
+	procedure catr80pad
+	( 
+		dest:string; 
+		r:real80; 
+		width:int32; 
+		decpts:uns32; 
+		pad:char
+	);  
+	@external( "STR_CATR80PAD" );
+
+	procedure catr64
+	( 
+		dest:string; 
+		r:real64; 
+		width:int32; 
+		decpts:uns32
+	);  
+	@external( "STR_CATR64" );
+
+	procedure catr64pad
+	( 
+		dest:string; 
+		r:real64; 
+		width:int32; 
+		decpts:uns32; 
+		pad:char
+	);  
+	@external( "STR_CATR64PAD" );
+
+	procedure catr32
+	( 
+		dest:string; 
+		r:real32; 
+		width:int32; 
+		decpts:uns32
+	);  
+	@external( "STR_CATR32" );
+
+	procedure catr32pad
+	( 
+		dest:string; 
+		r:real32; 
+		width:int32; 
+		decpts:uns32; 
+		pad:char
+	);  
+	@external( "STR_CATR32PAD" );
+
+
+
+
+	procedure cate80
+	( 
+		dest:string; 
+		r:real80; 
+		width:int32 
+	);  
+	@external( "STR_CATE80" );
+
+	procedure cate64
+	( 
+		dest:string; 
+		r:real64; 
+		width:int32 
+	);  
+	@external( "STR_CATE64" );
+
+	procedure cate32
+	( 
+		dest:string; 
+		r:real32; 
+		width:int32 
+	);  
+	@external( "STR_CATE32" );
+
+
+	// The following macros provide the same interface to cate32, cate64,
+	// and cate80 as the plain (without size/fill char) integer output
+	// routines:
+		
+	
+	#macro _cate80( _cate80_s_, _cate80_r_ );
+	
+		@global:str.cate80( _cate80_s_, _cate80_r_, 28 )
+		
+	#endmacro
+
+	#macro _cate64( _cate64_s_, _cate64_r_ );
+	
+		@global:str.cate64( _cate64_s_, _cate64_r_, 22 )
+		
+	#endmacro
+
+	#macro _cate32( _cate32_s_, _cate32_r_ );
+	
+		@global:str.cate32( _cate32_s_, _cate32_r_, 15 )
+		
+	#endmacro
+
+
+	// The following macros provide the same interface (for the cat macro)
+	// as the integerSize functions:
+	
+	#macro cate80_( _cate80_s_, _cate80_r_, _cate80_w_, _cate80_f_ );
+	
+		@global:str.cate80( _cate80_s_, _cate80_r_, _cate80_w_ )
+		
+	#endmacro
+
+
+	#macro cate64_( _cate64_s_, _cate64_r_, _cate64_w_, _cate64_f_ );
+	
+		@global:str.cate64( _cate64_s_, _cate64_r_, _cate64_w_ )
+		
+	#endmacro
+
+
+	#macro cate32_( _cate32_s_, _cate32_r_, _cate32_w_, _cate32_f_ );
+	
+		@global:str.cate32( _cate32_s_, _cate32_r_, _cate32_w_ )
+		
+	#endmacro
+
+
+const
+	validPutType :boolean[ @global:hla.sizePTypes ] :=
+		[
+			@global:false,		// Undefined
+			@global:true,		// tBoolean 	//1
+			@global:false,		// enum			//2
+			@global:true,		// tUns8,		//3
+			@global:true,		// tUns16,		//4
+			@global:true,		// tUns32,		//5
+			@global:true,		// tUns64,		//6
+			@global:true,		// tUns128,		//7
+			@global:true,		// tByte,		//8
+			@global:true,		// tWord,		//9
+			@global:true,		// tDWord,		//10
+			@global:true,		// tQWord,		//11
+			@global:false,		// tTByte,		//12
+			@global:true,		// tLWord,		//13
+			@global:true,		// tInt8,		//14
+			@global:true,		// tInt16,		//15
+			@global:true,		// tInt32,		//16
+			@global:true,		// tInt64,		//17
+			@global:true,		// tInt128,		//18
+			@global:true,		// tChar, 		//19
+			@global:false,		// tWChar,		//20
+			@global:true,		// tReal32,		//21
+			@global:true,		// tReal64, 	//22
+			@global:true,		// tReal80,		//23
+			@global:false,		// tReal128,	//24
+			@global:true,		// tString,		//25
+			@global:false,		// tZString,	//26
+			@global:false,		// tWString,	//27
+			@global:true,		// tCset,		//28
+			@global:false,		// tArray,		//29
+			@global:false,		// tRecord,		//30
+			@global:false,		// tUnion,		//31
+			@global:false,		// tClass,		//32
+			@global:false,		// tProcptr,	//33
+			@global:false,		// tThunk,		//34
+			@global:true,		// tPointer		//35
+			@global:false,		// tLabel		//36
+			@global:false,		// tProc		//37
+			@global:false,		// tMethod		//38
+			@global:false,		// tClassProc	//39
+			@global:false,		// tClassIter	//40
+			@global:false,		// tIterator	//41
+			@global:false,		// tProgram		//42
+			@global:false,		// tMacro		//43
+			@global:false,		// tText		//44
+			@global:false,		// tRegEx		//45
+			@global:false,		// tRegExMac	//46
+			@global:false,		// tNamespace	//47
+			@global:false,		// tSegment		//48
+			@global:false,		// tAnonRec		//49
+			@global:false,		// tAnonUnion	//50
+			@global:false,		// tVariant		//51
+			@global:false		// tError		//52
+		];
+
+	validPutSizeType :boolean[ @global:hla.sizePTypes ] :=
+		[
+			@global:false,		// Undefined
+			@global:false,		// tBoolean 	//1
+			@global:false,		// enum			//2
+			@global:true,		// tUns8,		//3
+			@global:true,		// tUns16,		//4
+			@global:true,		// tUns32,		//5
+			@global:true,		// tUns64,		//6
+			@global:true,		// tUns128,		//7
+			@global:true,		// tByte,		//8
+			@global:true,		// tWord,		//9
+			@global:true,		// tDWord,		//10
+			@global:true,		// tQWord,		//11
+			@global:false,		// tTByte,		//12
+			@global:true,		// tLWord,		//13
+			@global:true,		// tInt8,		//14
+			@global:true,		// tInt16,		//15
+			@global:true,		// tInt32,		//16
+			@global:true,		// tInt64,		//17
+			@global:true,		// tInt128,		//18
+			@global:true,		// tChar, 		//19
+			@global:false,		// tWChar,		//20
+			@global:true,		// tReal32,		//21
+			@global:true,		// tReal64, 	//22
+			@global:true,		// tReal80,		//23
+			@global:false,		// tReal128,	//24
+			@global:true,		// tString,		//25
+			@global:false,		// tZString,	//26
+			@global:false,		// tWString,	//27
+			@global:false,		// tCset,		//28
+			@global:false,		// tArray,		//29
+			@global:false,		// tRecord,		//30
+			@global:false,		// tUnion,		//31
+			@global:false,		// tClass,		//32
+			@global:false,		// tProcptr,	//33
+			@global:false,		// tThunk,		//34
+			@global:true,		// tPointer		//35
+			@global:false,		// tLabel		//36
+			@global:false,		// tProc		//37
+			@global:false,		// tMethod		//38
+			@global:false,		// tClassProc	//39
+			@global:false,		// tClassIter	//40
+			@global:false,		// tIterator	//41
+			@global:false,		// tProgram		//42
+			@global:false,		// tMacro		//43
+			@global:false,		// tText		//44
+			@global:false,		// tRegEx		//45
+			@global:false,		// tRegExMac	//46
+			@global:false,		// tNamespace	//47
+			@global:false,		// tSegment		//48
+			@global:false,		// tAnonRec		//49
+			@global:false,		// tAnonUnion	//50
+			@global:false,		// tVariant		//51
+			@global:false		// tError		//52
+		];										  
+
+
+
+
+	validPutSize2Type :boolean[ @global:hla.sizePTypes ] :=
+		[
+			@global:false,		// Undefined
+			@global:false,		// tBoolean 	//1
+			@global:false,		// enum			//2
+			@global:false,		// tUns8,		//3
+			@global:false,		// tUns16,		//4
+			@global:false,		// tUns32,		//5
+			@global:false,		// tUns64,		//6
+			@global:false,		// tUns128,		//7
+			@global:false,		// tByte,		//8
+			@global:false,		// tWord,		//9
+			@global:false,		// tDWord,		//10
+			@global:false,		// tQWord,		//11
+			@global:false,		// tTByte,		//12
+			@global:false,		// tLWord,		//13
+			@global:false,		// tInt8,		//14
+			@global:false,		// tInt16,		//15
+			@global:false,		// tInt32,		//16
+			@global:false,		// tInt64,		//17
+			@global:false,		// tInt128,		//18
+			@global:false,		// tChar, 		//19
+			@global:false,		// tWChar,		//20
+			@global:true,		// tReal32,		//21
+			@global:true,		// tReal64, 	//22
+			@global:true,		// tReal80,		//23
+			@global:false,		// tReal128,	//24
+			@global:false,		// tString,		//25
+			@global:false,		// tZString,	//26
+			@global:false,		// tWString,	//27
+			@global:false,		// tCset,		//28
+			@global:false,		// tArray,		//29
+			@global:false,		// tRecord,		//30
+			@global:false,		// tUnion,		//31
+			@global:false,		// tClass,		//32
+			@global:false,		// tProcptr,	//33
+			@global:false,		// tThunk,		//34
+			@global:false,		// tPointer		//35
+			@global:false,		// tLabel		//36
+			@global:false,		// tProc		//37
+			@global:false,		// tMethod		//38
+			@global:false,		// tClassProc	//39
+			@global:false,		// tClassIter	//40
+			@global:false,		// tIterator	//41
+			@global:false,		// tProgram		//42
+			@global:false,		// tMacro		//43
+			@global:false,		// tText		//44
+			@global:false,		// tRegEx		//45
+			@global:false,		// tRegExMac	//46
+			@global:false,		// tNamespace	//47
+			@global:false,		// tSegment		//48
+			@global:false,		// tAnonRec		//49
+			@global:false,		// tAnonUnion	//50
+			@global:false,		// tVariant		//51
+			@global:false		// tError		//52
+		];										  
+
+
+
+	putFunc :string[ @global:hla.sizePTypes ] :=
+		[
+			"",				// Undefined
+			"catbool",		// tBoolean 	//1
+			"",				// enum			//2
+			"catu8",		// tUns8,		//3
+			"catu16",		// tUns16,		//4
+			"catu32",		// tUns32,		//5
+			"catu64",		// tUns64,		//6
+			"catu128",		// tUns128,		//7
+			"catb",			// tByte,		//8
+			"catw",			// tWord,		//9
+			"catd",			// tDWord,		//10
+			"catq",			// tQWord,		//11
+			"cattb",		// tTByte,		//12
+			"catl",			// tLWord,		//13
+			"cati8",		// tInt8,		//14
+			"cati16",		// tInt16,		//15
+			"cati32",		// tInt32,		//16
+			"cati64",		// tInt64,		//17
+			"cati128",		// tInt128,		//18
+			"catc",			// tChar, 		//19
+			"",				// tWChar,		//20
+			"_cate32",		// tReal32,		//21
+			"_cate64",		// tReal64, 	//22
+			"_cate80",		// tReal80,		//23
+			"",				// tReal128,	//24
+			"cats",			// tString,		//25
+			"catzs",		// tZString,	//26
+			"",				// tWString,	//27
+			"catcset",		// tCset,		//28
+			"",				// tArray,		//29
+			"",				// tRecord,		//30
+			"",				// tUnion,		//31
+			"",				// tClass,		//32
+			"",				// tProcptr,	//33
+			"",				// tThunk,		//34
+			"catd",			// tPointer		//35
+			"",				// tLabel		//36
+			"",				// tProc		//37
+			"",				// tMethod		//38
+			"",				// tClassProc	//39
+			"",				// tClassIter	//40
+			"",				// tIterator	//41
+			"",				// tProgram		//42
+			"",				// tMacro		//43
+			"",				// tText		//44
+			"",				// tRegEx		//45
+			"",				// tRegExMac	//46
+			"",				// tNamespace	//47
+			"",				// tSegment		//48
+			"",				// tAnonRec		//49
+			"",				// tAnonUnion	//50
+			"",				// tVariant		//51
+			""				// tError		//52
+		];
+
+
+	putSizeFunc :string[ @global:hla.sizePTypes ] :=
+		[
+			"",					// Undefined
+			"",					// tBoolean 	//1
+			"",					// enum			//2
+			"catu8Size",		// tUns8,		//3
+			"catu16Size",		// tUns16,		//4
+			"catu32Size",		// tUns32,		//5
+			"catu64Size",		// tUns64,		//6
+			"catu128Size",		// tUns128,		//7
+			"catbSize",			// tByte,		//8
+			"catwSize",			// tWord,		//9
+			"catdSize",			// tDWord,		//10
+			"catqSize",			// tQWord,		//11
+			"",					// tTByte,		//12
+			"catSizel",			// tLWord,		//13
+			"cati8Size",		// tInt8,		//14
+			"cati16Size",		// tInt16,		//15
+			"cati32Size",		// tInt32,		//16
+			"cati64Size",		// tInt64,		//17
+			"cati128Size",		// tInt128,		//18
+			"catc",				// tChar, 		//19
+			"",					// tWChar,		//20
+			"cate32_",			// tReal32,		//21
+			"cate64_",			// tReal64, 	//22
+			"cate80_",			// tReal80,		//23
+			"",					// tReal128,	//24
+			"catsSize",			// tString,		//25
+			"",					// tZString,	//26
+			"",					// tWString,	//27
+			"",					// tCset,		//28
+			"",					// tArray,		//29
+			"",					// tRecord,		//30
+			"",					// tUnion,		//31
+			"",					// tClass,		//32
+			"",					// tProcptr,	//33
+			"",					// tThunk,		//34
+			"catdSize",			// tPointer		//35
+			"",					// tLabel		//36
+			"",					// tProc		//37
+			"",					// tMethod		//38
+			"",					// tClassProc	//39
+			"",					// tClassIter	//40
+			"",					// tIterator	//41
+			"",					// tProgram		//42
+			"",					// tMacro		//43
+			"",					// tText		//44
+			"",					// tRegEx		//45
+			"",					// tRegExMac	//46
+			"",					// tNamespace	//47
+			"",					// tSegment		//48
+			"",					// tAnonRec		//49
+			"",					// tAnonUnion	//50
+			"",					// tVariant		//51
+			""					// tError		//52
+		];										  
+
+
+	putSize2Func :string[ @global:hla.sizePTypes ] :=
+		[
+			"",					// Undefined
+			"",					// tBoolean 	//1
+			"",					// enum			//2
+			"",					// tUns8,		//3
+			"",					// tUns16,		//4
+			"",					// tUns32,		//5
+			"",					// tUns64,		//6
+			"",					// tUns128,		//7
+			"",					// tByte,		//8
+			"",					// tWord,		//9
+			"",					// tDWord,		//10
+			"",					// tQWord,		//11
+			"",					// tLWord,		//12
+			"",					// tLWord,		//13
+			"",					// tInt8,		//14
+			"",					// tInt16,		//15
+			"",					// tInt32,		//16
+			"",					// tInt64,		//17
+			"",					// tInt128,		//18
+			"",					// tChar, 		//19
+			"",					// tWChar,		//20
+			"catr32",			// tReal32,		//21
+			"catr64",			// tReal64, 	//22
+			"catr80",			// tReal80,		//23
+			"",					// tReal128,	//24
+			"",					// tString,		//25
+			"",					// tZString,	//26
+			"",					// tWString,	//27
+			"",					// tCset,		//28
+			"",					// tArray,		//29
+			"",					// tRecord,		//30
+			"",					// tUnion,		//31
+			"",					// tClass,		//32
+			"",					// tProcptr,	//33
+			"",					// tThunk,		//34
+			"",					// tPointer		//35
+			"",					// tLabel		//36
+			"",					// tProc		//37
+			"",					// tMethod		//38
+			"",					// tClassProc	//39
+			"",					// tClassIter	//40
+			"",					// tIterator	//41
+			"",					// tProgram		//42
+			"",					// tMacro		//43
+			"",					// tText		//44
+			"",					// tRegEx		//45
+			"",					// tRegExMac	//46
+			"",					// tNamespace	//47
+			"",					// tSegment		//48
+			"",					// tAnonRec		//49
+			"",					// tAnonUnion	//50
+			"",					// tVariant		//51
+			""					// tError		//52
+		];										  
+
+
+	// str.put macro:
+	// (note: use global VAL objects to speed up processing:
+	
+	val
+		_theParm_:string;
+		_theDest_:string;
+		
+	#macro put( _destStr_, _parameters_[] ); 
+
+		?@global:str._theDest_ := @string:_destStr_;
+		push( eax );
+		mov( _destStr_, eax );
+		mov( 0, (type str.strRec [eax]).length );
+		mov( 0, (type byte [eax]) );
+		pop( eax );
+		?@global:str._theParm_ :string := @string:_destStr_;
+		#for( @global:str._theParm_ in _parameters_ )
+
+			@global:hla.put
+			( 
+				str, 
+				@global:str._theDest_, 
+				@eval(@global:str._theParm_) 
+			)
+
+		#endfor
+
+	#endmacro
+
+
+
+	// str.put2 macro:
+	
+	val
+		_theParm2_:string;
+		_theDest2_:string;
+
+	#macro put2( _destStr_, _parameters_[] ):_sv_; 
+
+		?@global:str._theDest2_ := @string:_destStr_;
+			
+		#for( @global:str._theParm2_ in _parameters_ )
+
+			@global:hla.put
+			( 
+				str, 
+				@global:str._theDest2_, 
+				@eval(@global:str._theParm2_) 
+			)
+
+		#endfor
+
+	#endmacro
+
+
+
+
+end str;
+
+
+#endif

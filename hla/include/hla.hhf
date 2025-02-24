@@ -1,0 +1,610 @@
+#if( ! @defined( hla_hhf ))
+?hla_hhf := true;
+
+	
+// The following tells the system the major version # of the HLA standard library.
+const
+	HLAstdlibVersion := 1;
+	
+namespace hla;
+
+	const
+		
+		// ID character class used by the put macros:
+	
+		_idchars_:cset := {'a'..'z', 'A'..'Z', '0'..'9', '_', '.' };
+	
+
+		// SymClass constants.
+
+		cIllegal	:= 0;
+		cConstant	:= 1;	  
+		cValue		:= 2; 	  
+		cType		:= 3; 		  
+		cVar		:= 4;		  
+		cParm		:= 5;		  
+		cStatic		:= 6;	  
+		cLabel		:= 7;		  
+		cProc		:= 8;		  
+		cIterator	:= 9;	  
+		cClassProc	:= 10;
+		cClassIter  := 11;	  
+		cMethod		:= 12;
+		cMacro		:= 13;		  
+		cKeyword	:= 14;	  
+		cTerminator	:= 15;
+		cRegEx		:= 16;  
+		cProgram	:= 17; 	  
+		cNamespace	:= 18;
+		cSegment    := 19;
+		cRegister	:= 20;	  
+		cNone		:= 21;		  
+
+
+
+		// pType constants.
+
+		ptIllegal	:= 0;		
+		ptBoolean	:= 1;		
+		ptEnum		:= 2;		
+						
+		ptUns8		:= 3;			
+		ptUns16		:= 4;		
+		ptUns32		:= 5;
+		ptUns64		:= 6;
+		ptUns128	:= 7;		
+						
+		ptByte		:= 8;			
+		ptWord		:= 9;			
+		ptDWord		:= 10;		
+		ptQWord		:= 11;
+		ptTByte		:= 12;
+		ptLWord		:= 13;
+						
+		ptInt8		:= 14;			
+		ptInt16		:= 15;		
+		ptInt32		:= 16;
+		ptInt64		:= 17;
+		ptInt128	:= 18;		
+						
+		ptChar		:= 19;
+		ptWChar		:= 20; 		
+						
+		ptReal32	:= 21;		
+		ptReal64	:= 22; 		
+		ptReal80	:= 23;
+		ptReal128	:= 24;	
+		 				
+		ptString	:= 25;
+		ptZString	:= 26;
+		ptWString	:= 27;		
+		ptCset		:= 28;		
+						
+		ptArray		:= 29;		
+		ptRecord	:= 30;
+		ptRegex		:= 31;		
+		ptUnion		:= 32;		
+		ptClass		:= 33;		
+		ptProcptr	:= 34;		
+		ptThunk		:= 35;		
+		ptPointer	:= 36;		
+
+		ptLabel		:= 37;		
+		ptProc		:= 38;			
+		ptMethod	:= 39;		
+		ptClassProc	:= 40;
+		ptClassIter := 41;
+		ptIterator	:= 42;
+		ptProgram	:= 43;		
+		ptMacro		:= 44;		
+		ptText		:= 45;		
+		ptRegExMac	:= 46;		
+						
+		ptNamespace	:= 47;	
+		ptSegment	:= 48;
+		ptAnonRec	:= 49;
+		ptAnonUnion := 50;
+		ptVariant	:= 51;
+		ptError		:= 52;
+
+		// Total Number of ptypes we support:
+
+		sizePTypes	:= 53;
+			  		
+
+
+		// ParmClass constants
+
+		illegal_pc	:= 0;		
+		valp_pc		:= 1;		
+		refp_pc		:= 2;		
+		vrp_pc		:= 3;			
+		result_pc	:= 4;		
+		name_pc		:= 5;		
+		lazy_pc		:= 6;
+		
+
+
+		/*
+		** The following constants correspond to bits in the
+		** value returned by @section.  They denote the current
+		** position of the compiler in the code.
+		*/
+
+		inConst		:= 1;
+		inVal		:= 2;
+		inType		:= 4;
+		inVar		:= 8;
+		inStatic	:= $10;
+		inReadonly	:= $20;
+		inStorage	:= $40;
+		inData		:= $80;
+
+		inMain		:= $1000;
+		inProcedure	:= $2000;
+		inMethod	:= $4000;
+		inIterator	:= $8000;
+		inMacro		:= $1_0000;
+		inKeyword	:= $2_0000;
+		inTerminator:= $4_0000;
+		inThunk		:= $8_0000;
+
+		inUnit		:= $80_0000;
+		inProgram	:= $100_0000;
+		inRecord	:= $200_0000;
+		inUnion		:= $400_0000;
+		inClass		:= $800_0000;
+		inNamespace := $1000_0000;
+
+
+
+	ptypeStrs :string[ sizePTypes ] :=
+		[
+			"invalid",		//0
+			"boolean",		//1
+			"enum",			//2
+			"uns8",			//3
+			"uns16",		//4
+			"uns32",		//5
+			"uns64",		//6
+			"uns128",		//7
+			"byte",			//8
+			"word",			//9
+			"dword",		//10
+			"qword",		//11
+			"tbyte",		//12
+			"lword",		//13
+			"int8",			//14
+			"int16",		//15
+			"int32",		//16
+			"int64",		//17
+			"int128",		//18
+			"char",			//19
+			"wchar",		//20
+			"real32",		//21
+			"real64",		//22
+			"real80",		//23
+			"real128",		//24
+			"string",		//25
+			"zstring",		//26
+			"wstring",		//27
+			"cset",			//28
+			"(array)",		//29
+			"(record)",		//30
+			"(union)",		//31
+			"(class)",		//32
+			"(procptr)",	//33
+			"thunk",		//34
+			"dword",		//35	-- Really POINTER!
+			"(label)",		//36
+			"(proc)",		//37
+			"(method)",		//38
+			"(classProc)",	//39
+			"(classIter)",	//40
+			"(iterator)",	//41
+			"(program)",	//42
+			"(macro)",		//43
+			"(text)",		//44
+			"regex",		//45
+			"(regex)",		//46
+			"(namespace)",	//47
+			"(segment)",	//48
+			"(anonRec)",	//49
+			"(anonUnion",	//50
+			"(variant",		//51
+			"(error)"		//52	Used to denote a cascading error.
+		];				
+
+
+	// The following macro generates a sequence of
+	// strings that are unique, legal, HLA identifiers
+	// (within the current compilation, do not use
+	// these as public symbols).
+
+	val
+		_hla_labelCnt_ := 0;
+
+
+	#macro genLabel;
+
+		"_genLabel_" + string( hla._hla_labelCnt_ ) + "_"
+		?hla._hla_labelCnt_ := hla._hla_labelCnt_ + 1;
+
+	#endmacro
+
+
+
+
+	// Macros to test the (p)Type of an object:
+
+	#macro isUns( obj );
+
+		( @ptype( obj ) >= hla.ptUns8 & @ptype( obj ) <= hla.ptUns32 )
+
+	#endmacro
+
+
+	#macro isInt( obj );
+
+		( @ptype( obj ) >= hla.ptInt8 & @ptype( obj ) <= hla.ptInt32 )
+
+	#endmacro
+
+
+	#macro isHex( obj );
+
+		( @ptype( obj ) >= hla.ptByte & @ptype( obj ) <= hla.ptDWord )
+
+	#endmacro
+
+	#macro isNumber( obj );
+
+		( @ptype( obj ) >= hla.ptUns8 & @ptype( obj ) <= hla.ptInt32 )
+
+	#endmacro
+
+	#macro isOrdinal( obj );
+
+		( @ptype( obj ) >= hla.ptBoolean & @ptype( obj ) <= hla.ptChar )
+
+	#endmacro
+
+
+	#macro isNumeric( obj );
+
+		(
+				( 
+						@ptype( obj ) >= hla.ptUns8 
+					&	@ptype( obj ) <= hla.ptInt32 
+				)
+			|	(
+						@ptype( obj ) >= hla.ptReal32 
+					&	@ptype( obj ) <= hla.ptReal80
+				)
+		)
+
+	#endmacro
+
+
+	#macro isReal( obj );
+
+		(
+				@ptype( obj ) >= hla.ptReal32 
+			&	@ptype( obj ) <= hla.ptReal80
+		)
+
+	#endmacro
+
+
+	/////////////////////////////////////////////////////////////////////////
+	//
+	// Support macro for xxxxx.put:
+	//
+	// Generic put macro-
+	//
+	//	For stdout.out, fileio.put, str.put, etc...
+	//	
+	// Note: the following are made global rather than local in the macro
+	// in order to (vastly) speed up processing of the put macros.
+		
+	val
+		_pType_:string;
+		_arg_:string;
+		_width_:string;
+		_decpts_:string;
+		_parmArray_:string;
+		_id_:string;
+		_idLen_:string;
+		_fieldCnt_:string;
+		_valid_:string;
+		_func_:string;
+		_sizeParms_:string;
+		_realsize_:string;
+		_prefix_:string;
+		_typename_:string;
+		
+		
+	#macro put( _package_, _dest_, _parameter_[] );
+		
+
+		// The following loop repeats once for each PUT parameter
+		// we process.
+
+		// The following stmt frees up any storage
+		// currently in use by parmArray.
+
+		?@global:hla._parmArray_:uns32 := 0;
+
+		// Get the current parameter into parmArray.
+		// Parameter takes the form:
+		//
+		//	value_to_print : Field_Width : Fractional_Width
+		//
+		// the "Field_Width" and "Fractional_Width" components
+		// are optional (or may not be allowed for certain types).
+		//
+		// The following call to @tokenize puts "value_to_print"
+		// into parmArray[0].  If present, it puts the "Field_Width"
+		// and "Fractional_Width" values into parmArray[1] and
+		// parmArray[2], respectively.
+
+		?@global:hla._parmArray_ :=	
+			@tokenize
+			(
+				_parameter_[0],
+				0,
+				{':'},
+				{
+					'"', 
+					'''', 
+					'[', 
+					']', 
+					'(', 
+					')', 
+					'{', 
+					'}' 
+				}
+			);
+		
+		// If this parameter begins with an identifier,
+		// there are some problems to deal with.
+		// The symbol table functions (e.g., @ptype) don't
+		// allow address expression components after the
+		// symbol name.  Named constants, however, do allow
+		// such entities.  The following code determines
+		// (1) is this a symbol?  (2) if it is a symbol, is
+		// it a constant?
+		//
+		//	For non-constant symbols, we need to strip any
+		// trailing non-symbol characters from the string
+		// (e.g., "[0]" ).
+
+		?@global:hla._arg_ := @trim( @global:hla._parmArray_[ 0 ], 0 );
+		#if( char( @global:hla._arg_ ) in @global:hla._idchars_ )
+
+			// If this parameter begins with an id character,
+			// then strip away any non-ID symbols from the
+			// end of the string.  Then determine if we've
+			// got a constant or some other class (e.g.,
+			// variable or procedure).  If not a constant,
+			// keep only the name.  If a constant, we need
+			// to keep all trailing characters as well.
+
+			?@global:hla._id_ := @global:hla._arg_;
+			?@global:hla._idLen_ := 
+				@strspan( @global:hla._arg_, 0, @global:hla._idchars_ );
+				
+			#if( @global:hla._idLen_ > 0 )
+
+				?@global:hla._id_ := 
+					@substr
+					( 
+						@global:hla._arg_, 
+						0,
+						@global:hla._idLen_ 
+					);
+
+			#endif
+			#if
+			( 
+					@class( @global:hla._id_ ) = hla.cConstant 
+				|	@class( @global:hla._id_ ) = hla.cValue 
+			)
+
+				?@global:hla._id_ := @global:hla._arg_;
+
+			#endif
+
+
+		#else
+
+			// If it's not an ID, we need to keep everything.
+
+			?@global:hla._id_ := @global:hla._arg_;
+
+		#endif
+		
+		// Determine the type of this parameter so we can
+		// call the appropriate routine to print it.
+
+		?@global:hla._prefix_	:string := @string:_package_ + ".";
+		?@global:hla._pType_ := @pType(  @text( @global:hla._id_ ));
+		#if( @pType( @text( @global:hla._id_ )) <> hla.ptPointer )
+
+			?@global:hla._pType_ := @basepType( @text( @global:hla._id_ ));
+
+		#endif
+
+		// Assume the result is valid.
+		
+		?@global:hla._valid_ := true;		
+
+		// Okay, determine if the caller supplied a field width
+		// value with this parameter.
+		
+		
+		?@global:hla._fieldCnt_ := @elements( @global:hla._parmArray_ );
+		?@global:hla._width_ := "-1";		// Default width value.
+		?@global:hla._decpts_ := "-1";		// Default fractional value.
+		?@global:hla._sizeParms_ := "";		// Assume no size parameter(s)
+		?@global:hla._typename_	 := hla.ptypeStrs[ @global:hla._pType_ ];
+		?@global:hla._valid_ := true;		
+		
+		#if( @global:hla._fieldCnt_ = 1 )
+		
+			#if( !_package_.validPutType[ @global:hla._pType_ ] )
+			
+				?@global:hla._valid_ := false;		
+				#error( "This output type is not supported" )
+				
+			#else
+			
+				?@global:hla._func_	:string := 
+					@global:hla._prefix_ + 
+						_package_.putFunc[ @global:hla._pType_ ];
+						
+			#endif
+			
+		
+		#elseif( @global:hla._fieldCnt_ = 2 )
+
+			#if( !_package_.validPutSizeType[ @global:hla._pType_ ] )
+			
+				?@global:hla._valid_ := false;		
+				#error( "This type does not support an output width" )
+				
+			#else
+				
+				?@global:hla._func_	:string := 
+					@global:hla._prefix_ + 
+						_package_.putSizeFunc[ @global:hla._pType_ ];
+
+				?@global:hla._width_ := @trim( @global:hla._parmArray_[ 1 ], 0 );
+				?@global:hla._sizeParms_ := "," + @global:hla._width_ + ",' '";
+				
+			#endif
+
+		#elseif( @global:hla._fieldCnt_ = 3 )
+
+			// Determine if the user supplied a fractional width
+			// value with this parameter.
+	
+
+			#if( !_package_.validPutSize2Type[ @global:hla._pType_ ] )
+			
+				?@global:hla._valid_ := false;		
+				#error
+				( 
+					"This type does not support a second (decpts) output width" 
+				)
+				
+			#else
+			
+				?@global:hla._func_	:string := 
+					@global:hla._prefix_ + 
+						_package_.putSize2Func[ @global:hla._pType_ ];
+
+				?@global:hla._width_ := @trim( @global:hla._parmArray_[ 1 ], 0 );
+				?@global:hla._decpts_ := @trim( @global:hla._parmArray_[ 2 ], 0 );
+				?@global:hla._sizeParms_:string := 
+										"," 
+									+	@global:hla._width_ 
+									+	"," 
+									+	@global:hla._decpts_;
+						
+				
+			#endif
+
+		#else
+
+			?@global:hla._valid_ := false;		
+			#error
+			( 
+				"<<" + _parameter_[0] + ">>" +
+				" has too many width fields" 
+			);
+
+		#endif
+
+		// Based on the type, call the appropriate library
+		// routine to print this value.
+
+		?@global:hla._valid_ := 
+				@global:hla._valid_
+			&	@global:hla._pType_ >= hla.ptBoolean 
+			&	@global:hla._pType_ <= hla.ptPointer;
+			
+
+		#if( @global:hla._valid_ )	
+
+			#if
+			( 
+					@isconst( @text( @global:hla._arg_ )) 
+				&	@global:hla._typename_ = "string"
+				&	@global:hla._arg_ = "#13 #10"
+				&	@defined( @text( @global:hla._prefix_ + "newln" ))
+			)
+				@text( @global:hla._prefix_ + "newln" )
+				(
+					#if( _dest_ <> "" )
+						@text( _dest_ )
+					#endif 
+				);
+
+			#elseif( @isconst( @text( @global:hla._arg_ )) )
+
+				@text( @global:hla._func_ )
+				(
+					#if( _dest_ <> "" )
+						@text( _dest_ ),
+					#endif 
+					@text( @global:hla._arg_ ) 
+					@text( @global:hla._sizeParms_ )
+				);
+
+			#else
+			
+			@text
+			(
+				@global:hla._func_
+				+ "("
+					#if( _dest_ <> "" )
+						+ _dest_ +","
+					#endif 
+					"(type " + @global:hla._typename_ + 
+					" " + @global:hla._arg_ +
+					" )" + 
+					@global:hla._sizeParms_ +
+				");"
+			)
+			
+
+			#endif
+			
+
+		#else
+
+			#error
+			(
+				@string:_package_ + 
+				".put: Unknown data type "
+				nl
+				"(" +
+				_parameter_[0] +
+				" is type """ +
+				@typename( @text( @global:hla._id_ )) +
+				""")"
+			);
+
+		#endif
+
+	#endmacro
+
+
+
+
+end hla;
+
+#endif
+
+

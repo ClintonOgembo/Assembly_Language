@@ -1,0 +1,659 @@
+#if( ! @defined( stderr_hhf ))
+?stderr_hhf := true;
+
+
+#includeOnce( "hla.hhf" )
+#includeOnce( "stdio.hhf" )
+
+/************************************************************************/
+/*                                                                      */
+/* 	The stderr Namespace:                                               */
+/*                                                                      */
+/************************************************************************/
+
+
+namespace stderr; @fast;
+
+
+
+	procedure handle; 
+		@returns( "eax" ); 
+		@external( "STDERR_GETSTDERRHANDLE" );
+
+	procedure write( var buffer:byte; count:dword ); 
+		@external( "STDERR_WRITE" );
+	
+	procedure putbool( b:boolean ); 	
+			@external( "STDERR_PUTBOOL" );
+
+	procedure putcset( cst:cset   ); 	
+			@external( "STDERR_PUTCSET_" );
+
+	procedure putc( c:char ); 		
+		@external( "STDERR_PUTC" );
+
+	procedure putcSize( c:char; width:int32; fill:char );
+		@external( "STDERR_PUTCSIZE" );
+
+	procedure newln; @external( "STDERR_NEWLN" );
+
+	procedure puts( s:string  ); 
+		@external( "STDERR_PUTS" );
+
+	procedure putsSize
+	( 
+		s:string; 
+		width:int32; 
+		fill:char 
+	);	@external( "STDERR_PUTSSIZE" );
+
+
+	procedure putb( h:byte    );		@external( "STDERR_PUTB" );
+	procedure putw( w:word 	  ); 		@external( "STDERR_PUTW" );
+	procedure putd( dw:dword ); 		@external( "STDERR_PUTD" );
+	procedure putq( qw:qword ); 		@external( "STDERR_PUTQ" );
+	procedure puttb( tb:tbyte ); 		@external( "STDERR_PUTTB" );
+	procedure putl( l:lword ); 			@external( "STDERR_PUTL" );
+
+	procedure putbSize
+	( 
+		b:byte; 
+		width:int32; 
+		fill:char 
+	); @external( "STDERR_PUTBSIZE" );
+
+	procedure putwSize
+	( 
+		w:word; 
+		width:int32; 
+		fill:char 
+	); @external( "STDERR_PUTWSIZE" );
+
+
+	procedure putdSize
+	( 
+		d:dword; 
+		width:int32; 
+		fill:char 
+	); @external( "STDERR_PUTDSIZE" );
+
+	procedure putqSize
+	( 
+		q:qword; 
+		width:int32; 
+		fill:char 
+	); @external( "STDERR_PUTQSIZE" );
+
+	procedure putlSize
+	( 
+		l:lword; 
+		width:int32; 
+		fill:char 
+	); @external( "STDERR_PUTLSIZE" );
+
+
+	procedure puti8  ( b:byte  ); 		@external( "STDERR_PUTI8" );
+	procedure puti16 ( w:word  ); 		@external( "STDERR_PUTI16" );
+	procedure puti32 ( d:dword ); 		@external( "STDERR_PUTI32" );
+	procedure puti64 ( q:qword ); 		@external( "STDERR_PUTI64" );
+	procedure puti128( l:lword ); 		@external( "STDERR_PUTI128" );
+
+	procedure puti8Size 
+	( 
+		b:byte;  
+		width:int32;	
+		fill:char 
+	); @external( "STDERR_PUTI8SIZE" );
+
+	procedure puti16Size
+	( 
+		w:word;  
+		width:int32;	
+		fill:char 
+	); @external( "STDERR_PUTI16SIZE" );
+
+	procedure puti32Size
+	( 
+		d:dword; 
+		width:int32;	
+		fill:char 
+	); @external( "STDERR_PUTI32SIZE" );
+
+	procedure puti64Size
+	( 
+		q:qword; 
+		width:int32; 
+		fill:char 
+	); @external( "STDERR_PUTI64SIZE" );
+
+	procedure puti128Size
+	( 
+		l:lword; 
+		width:int32; 
+		fill:char 
+	); @external( "STDERR_PUTI128SIZE" );
+
+
+
+	procedure putu8 ( b:byte  ); @external( "STDERR_PUTU8" );
+	procedure putu16( w:word  ); @external( "STDERR_PUTU16" );
+	procedure putu32( d:dword ); @external( "STDERR_PUTU32" );
+	procedure putu64( q:qword ); @external( "STDERR_PUTU64" );
+	procedure putu128( l:lword ); @external( "STDERR_PUTU128" );
+
+
+	procedure putu8Size 
+	( 
+		b:byte;  
+		width:int32;	
+		fill:char 
+	); @external( "STDERR_PUTU8SIZE" );
+
+	procedure putu16Size
+	( 
+		w:word;  
+		width:int32;	
+		fill:char 
+	); @external( "STDERR_PUTU16SIZE" );
+
+	procedure putu32Size
+	( 
+		d:dword; 
+		width:int32;	
+		fill:char 
+	); @external( "STDERR_PUTU32SIZE" );
+
+	procedure putu64Size
+	( 
+		q:qword; 
+		width:int32;	
+		fill:char 
+	); @external( "STDERR_PUTU64SIZE" );
+
+	procedure putu128Size
+	( 
+		l:lword; 
+		width:int32;	
+		fill:char 
+	); @external( "STDERR_PUTU128SIZE" );
+
+
+
+
+	procedure putr80
+	( 
+		r:real80; 
+		width:uns32; 
+		decpts:uns32 
+	); @external( "STDERR_PUTR80" );
+
+	procedure putr64
+	( 
+		r:real64; 
+		width:uns32; 
+		decpts:uns32 
+	); @external( "STDERR_PUTR64" );
+
+	procedure putr32
+	( 
+		r:real32; 
+		width:uns32; 
+		decpts:uns32 
+	); @external( "STDERR_PUTR32" );
+
+	procedure putr80pad
+	( 
+		r:real80; 
+		width:uns32; 
+		decpts:uns32; 
+		pad:char 
+	); @external( "STDERR_PUTR80PAD" );
+
+	procedure putr64pad
+	( 
+		r:real64; 
+		width:uns32; 
+		decpts:uns32; 
+		pad:char 
+	); @external( "STDERR_PUTR64PAD" );
+
+	procedure putr32pad
+	( 
+		r:real32; 
+		width:uns32; 
+		decpts:uns32; 
+		pad:char 
+	); @external( "STDERR_PUTR32PAD" );
+
+
+	procedure pute80( r:real80; width:uns32 ); 
+			@external( "STDERR_PUTE80" );
+
+	procedure pute64( r:real64; width:uns32 ); 
+			@external( "STDERR_PUTE64" );
+
+	procedure pute32( r:real32; width:uns32 ); 
+			@external( "STDERR_PUTE32" );
+
+
+
+	// The following macros provide the same interface to pute32, pute64,
+	// and pute80 as the plain (without size/fill char) integer output
+	// routines:
+		
+	
+	#macro _pute80( _pute80_r_ );
+	
+		@global:stderr.pute80( _pute80_r_, 28 )
+		
+	#endmacro
+
+	#macro _pute64( _pute64_r_ );
+	
+		@global:stderr.pute64( _pute64_r_, 22 )
+		
+	#endmacro
+
+	#macro _pute32( _pute32_r_ );
+	
+		@global:stderr.pute32( _pute32_r_, 15 )
+		
+	#endmacro
+
+
+	// The following macros provide the same interface (for the PUT macro)
+	// as the integerSize functions:
+	
+	#macro pute80_( _pute80_r_, _pute80_w_, f );
+	
+		@global:stderr.pute80( _pute80_r_, _pute80_w_ )
+		
+	#endmacro
+
+
+	#macro pute64_( _pute64_r_, _pute64_w_, _pute64_f_ );
+	
+		@global:stderr.pute64( _pute64_r_, _pute64_w_ )
+		
+	#endmacro
+
+
+	#macro pute32_( _pute32_r_, _pute32_w_, _pute32_f_ );
+	
+		@global:stderr.pute32( _pute32_r_, _pute32_w_ )
+		
+	#endmacro
+	
+
+
+
+
+const
+	validPutType :boolean[ @global:hla.sizePTypes ] :=
+		[
+			@global:false,		// Undefined
+			@global:true,		// tBoolean 	//1
+			@global:false,		// enum			//2
+			@global:true,		// tUns8,		//3
+			@global:true,		// tUns16,		//4
+			@global:true,		// tUns32,		//5
+			@global:true,		// tUns64,		//6
+			@global:true,		// tUns128,		//7
+			@global:true,		// tByte,		//8
+			@global:true,		// tWord,		//9
+			@global:true,		// tDWord,		//10
+			@global:true,		// tQWord,		//11
+			@global:true,		// tTByte,		//12
+			@global:true,		// tLWord,		//13
+			@global:true,		// tInt8,		//14
+			@global:true,		// tInt16,		//15
+			@global:true,		// tInt32,		//16
+			@global:true,		// tInt64,		//17
+			@global:true,		// tInt128,		//18
+			@global:true,		// tChar, 		//19
+			@global:false,		// tWChar,		//20
+			@global:true,		// tReal32,		//21
+			@global:true,		// tReal64, 	//22
+			@global:true,		// tReal80,		//23
+			@global:false,		// tReal128,	//24
+			@global:true,		// tString,		//25
+			@global:false,		// tZString,	//26
+			@global:false,		// tWString,	//27
+			@global:true,		// tCset,		//28
+			@global:false,		// tArray,		//29
+			@global:false,		// tRecord,		//30
+			@global:false,		// tUnion,		//31
+			@global:false,		// tClass,		//32
+			@global:false,		// tProcptr,	//33
+			@global:false,		// tThunk,		//34
+			@global:true,		// tPointer		//35
+			@global:false,		// tLabel		//36
+			@global:false,		// tProc		//37
+			@global:false,		// tMethod		//38
+			@global:false,		// tClassProc	//39
+			@global:false,		// tClassIter	//40
+			@global:false,		// tIterator	//41
+			@global:false,		// tProgram		//42
+			@global:false,		// tMacro		//43
+			@global:false,		// tText		//44
+			@global:false,		// tRegEx		//45
+			@global:false,		// tRegExMac	//46
+			@global:false,		// tNamespace	//47
+			@global:false,		// tSegment		//48
+			@global:false,		// tAnonRec		//49
+			@global:false,		// tAnonUnion	//50
+			@global:false,		// tVariant		//51
+			@global:false		// tError		//52
+		];
+
+	validPutSizeType :boolean[ @global:hla.sizePTypes ] :=
+		[
+			@global:false,		// Undefined
+			@global:true,		// tBoolean 	//1
+			@global:false,		// enum			//2
+			@global:true,		// tUns8,		//3
+			@global:true,		// tUns16,		//4
+			@global:true,		// tUns32,		//5
+			@global:true,		// tUns64,		//6
+			@global:true,		// tUns128,		//7
+			@global:false,		// tByte,		//8
+			@global:false,		// tWord,		//9
+			@global:false,		// tDWord,		//10
+			@global:false,		// tQWord,		//11
+			@global:false,		// tTByte,		//12
+			@global:false,		// tLWord,		//13
+			@global:true,		// tInt8,		//14
+			@global:true,		// tInt16,		//15
+			@global:true,		// tInt32,		//16
+			@global:true,		// tInt64,		//17
+			@global:true,		// tInt128,		//18
+			@global:true,		// tChar, 		//19
+			@global:false,		// tWChar,		//20
+			@global:true,		// tReal32,		//21
+			@global:true,		// tReal64, 	//22
+			@global:true,		// tReal80,		//23
+			@global:false,		// tReal128,	//24
+			@global:true,		// tString,		//25
+			@global:false,		// tZString,	//26
+			@global:false,		// tWString,	//27
+			@global:false,		// tCset,		//28
+			@global:false,		// tArray,		//29
+			@global:false,		// tRecord,		//30
+			@global:false,		// tUnion,		//31
+			@global:false,		// tClass,		//32
+			@global:false,		// tProcptr,	//33
+			@global:false,		// tThunk,		//34
+			@global:false,		// tPointer		//35
+			@global:false,		// tLabel		//36
+			@global:false,		// tProc		//37
+			@global:false,		// tMethod		//38
+			@global:false,		// tClassProc	//39
+			@global:false,		// tClassIter	//40
+			@global:false,		// tIterator	//41
+			@global:false,		// tProgram		//42
+			@global:false,		// tMacro		//43
+			@global:false,		// tText		//44
+			@global:false,		// tRegEx		//45
+			@global:false,		// tRegExMac	//46
+			@global:false,		// tNamespace	//47
+			@global:false,		// tSegment		//48
+			@global:false,		// tAnonRec		//49
+			@global:false,		// tAnonUnion	//50
+			@global:false,		// tVariant		//51
+			@global:false		// tError		//52
+		];										  
+
+
+
+
+	validPutSize2Type :boolean[ @global:hla.sizePTypes ] :=
+		[
+			@global:false,		// Undefined
+			@global:false,		// tBoolean 	//1
+			@global:false,		// enum			//2
+			@global:false,		// tUns8,		//3
+			@global:false,		// tUns16,		//4
+			@global:false,		// tUns32,		//5
+			@global:false,		// tUns64,		//6
+			@global:false,		// tUns128,		//7
+			@global:false,		// tByte,		//8
+			@global:false,		// tWord,		//9
+			@global:false,		// tDWord,		//10
+			@global:false,		// tQWord,		//11
+			@global:false,		// tTByte,		//12
+			@global:false,		// tLWord,		//13
+			@global:false,		// tInt8,		//14
+			@global:false,		// tInt16,		//15
+			@global:false,		// tInt32,		//16
+			@global:false,		// tInt64,		//17
+			@global:false,		// tInt128,		//18
+			@global:false,		// tChar, 		//19
+			@global:false,		// tWChar,		//20
+			@global:true,		// tReal32,		//21
+			@global:true,		// tReal64, 	//22
+			@global:true,		// tReal80,		//23
+			@global:false,		// tReal128,	//24
+			@global:false,		// tString,		//25
+			@global:false,		// tZString,	//26
+			@global:false,		// tWString,	//27
+			@global:false,		// tCset,		//28
+			@global:false,		// tArray,		//29
+			@global:false,		// tRecord,		//30
+			@global:false,		// tUnion,		//31
+			@global:false,		// tClass,		//32
+			@global:false,		// tProcptr,	//33
+			@global:false,		// tThunk,		//34
+			@global:false,		// tPointer		//35
+			@global:false,		// tLabel		//36
+			@global:false,		// tProc		//37
+			@global:false,		// tMethod		//38
+			@global:false,		// tClassProc	//39
+			@global:false,		// tClassIter	//40
+			@global:false,		// tIterator	//41
+			@global:false,		// tProgram		//42
+			@global:false,		// tMacro		//43
+			@global:false,		// tText		//44
+			@global:false,		// tRegEx		//45
+			@global:false,		// tRegExMac	//46
+			@global:false,		// tNamespace	//47
+			@global:false,		// tSegment		//48
+			@global:false,		// tAnonRec		//49
+			@global:false,		// tAnonUnion	//50
+			@global:false,		// tVariant		//51
+			@global:false		// tError		//52
+		];										  
+
+
+
+	putFunc :string[ @global:hla.sizePTypes ] :=
+		[
+			"",				// Undefined
+			"putbool",		// tBoolean 	//1
+			"",				// enum			//2
+			"putu8",		// tUns8,		//3
+			"putu16",		// tUns16,		//4
+			"putu32",		// tUns32,		//5
+			"putu64",		// tUns64,		//6
+			"putu128",		// tUns128,		//7
+			"putb",			// tByte,		//8
+			"putw",			// tWord,		//9
+			"putd",			// tDWord,		//10
+			"putq",			// tQWord,		//11
+			"puttb",		// tLWord,		//12
+			"putl",			// tLWord,		//13
+			"puti8",		// tInt8,		//14
+			"puti16",		// tInt16,		//15
+			"puti32",		// tInt32,		//16
+			"puti64",		// tInt64,		//17
+			"puti128",		// tInt128,		//18
+			"putc",			// tChar, 		//19
+			"",				// tWChar,		//20
+			"_pute32",		// tReal32,		//21
+			"_pute64",		// tReal64, 	//22
+			"_pute80",		// tReal80,		//23
+			"",				// tReal128,	//24
+			"puts",			// tString,		//25
+			"putzs",		// tZString,	//26
+			"",				// tWString,	//27
+			"putcset",		// tCset,		//28
+			"",				// tArray,		//29
+			"",				// tRecord,		//30
+			"",				// tUnion,		//31
+			"",				// tClass,		//32
+			"",				// tProcptr,	//33
+			"",				// tThunk,		//34
+			"putd",			// tPointer		//35
+			"",				// tLabel		//36
+			"",				// tProc		//37
+			"",				// tMethod		//38
+			"",				// tClassProc	//39
+			"",				// tClassIter	//40
+			"",				// tIterator	//41
+			"",				// tProgram		//42
+			"",				// tMacro		//43
+			"",				// tText		//44
+			"",				// tRegEx		//45
+			"",				// tRegExMac	//46
+			"",				// tNamespace	//47
+			"",				// tSegment		//48
+			"",				// tAnonRec		//49
+			"",				// tAnonUnion	//50
+			"",				// tVariant		//51
+			""				// tError		//52
+		];									  
+
+
+	putSizeFunc :string[ @global:hla.sizePTypes ] :=
+		[
+			"",					// Undefined
+			"putboolSize",		// tBoolean 	//1
+			"",					// enum			//2
+			"putu8Size",		// tUns8,		//3
+			"putu16Size",		// tUns16,		//4
+			"putu32Size",		// tUns32,		//5
+			"putu64Size",		// tUns64,		//6
+			"putu128Size",		// tUns128,		//7
+			"",					// tByte,		//8
+			"",					// tWord,		//9
+			"",					// tDWord,		//10
+			"",					// tQWord,		//11
+			"",					// tLWord,		//12
+			"",					// tLWord,		//13
+			"puti8Size",		// tInt8,		//14
+			"puti16Size",		// tInt16,		//15
+			"puti32Size",		// tInt32,		//16
+			"puti64Size",		// tInt64,		//17
+			"puti128Size",		// tInt128,		//18
+			"putcSize",			// tChar, 		//19
+			"",					// tWChar,		//20
+			"pute32_",			// tReal32,		//21
+			"pute64_",			// tReal64, 	//22
+			"pute80_",			// tReal80,		//23
+			"",					// tReal128,	//24
+			"putsSize",			// tString,		//25
+			"putzsSize",		// tZString,	//26
+			"",					// tWString,	//27
+			"",					// tCset,		//28
+			"",					// tArray,		//29
+			"",					// tRecord,		//30
+			"",					// tUnion,		//31
+			"",					// tClass,		//32
+			"",					// tProcptr,	//33
+			"",					// tThunk,		//34
+			"",					// tPointer		//35
+			"",					// tLabel		//36
+			"",					// tProc		//37
+			"",					// tMethod		//38
+			"",					// tClassProc	//39
+			"",					// tClassIter	//40
+			"",					// tIterator	//41
+			"",					// tProgram		//42
+			"",					// tMacro		//43
+			"",					// tText		//44
+			"",					// tRegEx		//45
+			"",					// tRegExMac	//46
+			"",					// tNamespace	//47
+			"",					// tSegment		//48
+			"",					// tAnonRec		//49
+			"",					// tAnonUnion	//50
+			"",					// tVariant		//51
+			""					// tError		//52
+		];										  
+
+
+	putSize2Func :string[ @global:hla.sizePTypes ] :=
+		[
+			"",					// Undefined
+			"",					// tBoolean 	//1
+			"",					// enum			//2
+			"",					// tUns8,		//3
+			"",					// tUns16,		//4
+			"",					// tUns32,		//5
+			"",					// tUns64,		//6
+			"",					// tUns128,		//7
+			"",					// tByte,		//8
+			"",					// tWord,		//9
+			"",					// tDWord,		//10
+			"",					// tQWord,		//11
+			"",					// tLWord,		//12
+			"",					// tLWord,		//13
+			"",					// tInt8,		//14
+			"",					// tInt16,		//15
+			"",					// tInt32,		//16
+			"",					// tInt64,		//17
+			"",					// tInt128,		//18
+			"",					// tChar, 		//19
+			"",					// tWChar,		//20
+			"putr32",			// tReal32,		//21
+			"putr64",			// tReal64, 	//22
+			"putr80",			// tReal80,		//23
+			"",					// tReal128,	//24
+			"",					// tString,		//25
+			"",					// tZString,	//26
+			"",					// tWString,	//27
+			"",					// tCset,		//28
+			"",					// tArray,		//29
+			"",					// tRecord,		//30
+			"",					// tUnion,		//31
+			"",					// tClass,		//32
+			"",					// tProcptr,	//33
+			"",					// tThunk,		//34
+			"",					// tPointer		//35
+			"",					// tLabel		//36
+			"",					// tProc		//37
+			"",					// tMethod		//38
+			"",					// tClassProc	//39
+			"",					// tClassIter	//40
+			"",					// tIterator	//41
+			"",					// tProgram		//42
+			"",					// tMacro		//43
+			"",					// tText		//44
+			"",					// tRegEx		//45
+			"",					// tRegExMac	//46
+			"",					// tNamespace	//47
+			"",					// tSegment		//48
+			"",					// tAnonRec		//49
+			"",					// tAnonUnion	//50
+			"",					// tVariant		//51
+			""					// tError		//52
+		];										  
+
+
+	val
+		_curParm_:string;
+		
+	#macro put( _parameters_[] );
+
+		#for( @global:stderr._curParm_ in _parameters_ )
+
+			@global:hla.put( stderr, "", @eval(@global:stderr._curParm_) )
+
+		#endfor
+
+	#endmacro
+
+
+end stderr;
+
+
+#endif

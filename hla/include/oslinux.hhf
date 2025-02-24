@@ -1,0 +1,31 @@
+#if( ! @defined( os_hhf ))
+?os_hhf := true;
+
+
+namespace os;
+
+	// Note: os.win32 and os.linux specify the operating system
+	//		 in use.  This file must be manually edited as appropriate
+	//		 for use under Windows or Linux so these constants contain
+	//		 the appropriate values.
+	
+	const
+		linux := @global:true;
+		win32 := @global:false;
+		freeBSD := @global:false;
+		macOS := @global:false;
+
+	procedure system( cmdLn:string ); @external( "OS_SYSTEM" );
+	
+	#macro exitProcess( rtnCode );
+		
+		mov( rtnCode, eax );
+		xor( ebx, ebx );
+		int( $80 );
+		
+	#endmacro	
+		
+end os;
+	
+
+#endif
