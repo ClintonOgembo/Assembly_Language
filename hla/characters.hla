@@ -1,0 +1,14 @@
+program characters;
+#include("stdlib.hhf");
+
+static
+    c: char;
+    letterA: char :='A' ;
+
+begin characters;
+    stdout.put("Initialised character value is ", letterA,nl);
+    stdout.put("Enter a new character value:");
+    stdin.get(c);
+    stdout.put("You entered the following new character value:",c,nl);
+
+end characters;
